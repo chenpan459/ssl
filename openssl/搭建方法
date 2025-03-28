@@ -7,12 +7,140 @@
    cd openssl-3.0.10
 2、配置安装路径
    ./config --prefix=/usr/local/openssl --openssldir=/usr/local/openssl shared
+
+   ./config --prefix=/usr/local/openssl no-shared no-threads enable-engine
+
+
+auto/lib/openssl/make:67:	&& ./config --prefix=$ngx_prefix no-shared no-threads $OPENSSL_OPT \\
+objs/Makefile:1232:	&& ./config --prefix=/root/4119/openssl-3.4.1/.openssl no-shared no-threads enable-engine \
+/root/4119/openssl-3.4.1/.openssl/lib64/engines-3/tf_engine.so
+
+
 3、编译并安装
    make -j4
    sudo make install
 4、更新动态库路径
-   export LD_LIBRARY_PATH=/usr/local/openssl/lib:$LD_LIBRARY_PATH
+   export LD_LIBRARY_PATH=/usr/local/openssl/lib64:$LD_LIBRARY_PATH
+
+   export LD_LIBRARY_PATH=/root/4119/openssl-3.4.1/.openssl/lib:$LD_LIBRARY_PATH
+   
+   ./bin/openssl speed -engine skf_engine -evp sm4
+
+
+
 5、检查安装的 OpenSSL 版本
    openssl version
 
+
+
+
 ========环境搭建================
+1、生成私钥
+openssl genpkey -algorithm RSA -out /etc/ssl/private/server.key -aes256
+
+2、生成证书签名请求 (CSR)
+openssl req -new -key /etc/ssl/private/server.key -out /etc/ssl/certs/server.csr
+
+3、生成自签名证书
+openssl x509 -req -days 3650 -in /etc/ssl/certs/server.csr -signkey /etc/ssl/private/server.key -out /etc/ssl/certs/server.crt
+
+
+
+1. OpenSSL 版本信息
+查看 OpenSSL 版本：openssl version
+查看 OpenSSL 详细信息：openssl version -a
+
+2. 生成密钥和证书
+2.1 生成 RSA 私钥
+生成一个 2048 位 RSA 私钥：openssl genpkey -algorithm RSA -out private.key
+
+2.2 生成 RSA 公钥
+从 RSA 私钥 生成 公钥：openssl rsa -in private.key -pubout -out public.key
+
+2.3 生成自签名证书
+使用 私钥 生成一个自签名的 X.509 证书（通常用于测试）：
+    openssl req -x509 -new -nodes -key private.key -sha256 -days 365 -out certificate.crt
+参数说明：
+    -x509：表示生成 X.509 格式的证书。
+    -days 365：证书有效期为 365 天。
+    -sha256：使用 SHA-256 算法。
+    -out certificate.crt：输出证书。
+
+3. 查看证书信息
+3.1 查看证书内容
+查看证书的详细信息: openssl x509 -in certificate.crt -text -noout
+参数说明：
+    -in certificate.crt：输入证书文件。
+    -text：以可读格式显示证书内容。
+    -noout：不输出证书的 Base64 编码。
+
+3.2 查看证书过期时间
+查看证书的过期日期：openssl x509 -enddate -noout -in certificate.crt
+
+3.3 查看证书的主题和颁发者
+查看证书的主题（subject）和颁发者（issuer）：
+openssl x509 -noout -subject -issuer -in certificate.crt
+
+4. 证书验证
+4.1 验证证书是否有效
+使用 CA 根证书 验证证书的有效性： openssl verify -CAfile ca.crt certificate.crt
+参数说明：
+    -CAfile ca.crt：指定根证书。
+    certificate.crt：需要验证的证书。
+
+5. SSL/TLS 连接测试
+5.1 测试与服务器的 SSL/TLS 连接
+连接到 SSL/TLS 服务器并查看握手信息：openssl s_client -connect example.com:443
+参数说明：
+    -connect example.com:443：指定服务器和端口。
+5.2 测试 STARTTLS
+测试 SMTP、IMAP 或 POP3 协议的 STARTTLS：   
+openssl s_client -connect smtp.example.com:25 -starttls smtp
+openssl s_client -connect imap.example.com:143 -starttls imap
+
+6. 加密与解密
+6.1 使用对称加密加密文件
+使用 AES-256-CBC 加密文件：
+   openssl enc -aes-256-cbc -salt -in plaintext.txt -out encrypted.bin -k "mypassword"
+参数说明：
+    -aes-256-cbc：选择 AES 256 位 CBC 模式。
+    -salt：使用随机盐值。
+    -in plaintext.txt：待加密的文件。
+    -out encrypted.bin：加密后的文件。
+6.2 解密文件
+解密加密文件：
+openssl enc -aes-256-cbc -d -in encrypted.bin -out decrypted.txt -k "mypassword"
+6.3 使用公钥加密数据
+openssl rsautl -encrypt -pubin -inkey public.key -in plaintext.txt -out encrypted.dat
+6.4 使用私钥解密数据
+openssl rsautl -decrypt -inkey private.key -in encrypted.dat -out decrypted.txt
+
+7. 哈希与消息摘要
+7.1 计算文件的 SHA256 哈希
+计算文件的 SHA-256 哈希值：
+openssl dgst -sha256 file.txt
+示例输出：
+SHA256(file.txt)= d2b2c5f872a347a5de089a61c8f4ef36e9c5e4b5e5cf0b7d1f4e8a7d8a2c5a4f
+
+7.2 计算 HMAC
+计算文件的 HMAC-SHA256：
+openssl dgst -sha256 -hmac "secret_key" file.txt
+
+8. 加密算法性能测试
+8.1 测试加密算法性能
+openssl speed rsa2048 aes-256-cbc sha256
+这条命令会测试 RSA2048、AES-256-CBC、SHA-256 等算法的加密性能。
+
+8.2 测试 SSL 握手时间
+使用 openssl s_time 测试与服务器的 SSL 握手性能：
+openssl s_time -connect example.com:443
+
+9. 生成 PKCS#12 文件
+9.1 生成 PKCS#12 文件
+将证书和私钥打包成一个 PKCS#12 文件（通常用于导入到浏览器或其他应用）：
+openssl pkcs12 -export -inkey private.key -in certificate.crt -out certificate.p12
+参数说明：
+    -export：导出为 PKCS#12 文件。
+    -inkey private.key：私钥文件。
+    -in certificate.crt：证书文件。
+    -out certificate.p12：输出的 PKCS#12 文件。

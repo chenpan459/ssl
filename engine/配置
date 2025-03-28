@@ -1,0 +1,22 @@
+
+1、编译
+gcc -o tf_engine.so -fPIC -shared tf_engine.c -I/usr/local/openssl -lcrypto
+
+#
+export LD_LIBRARY_PATH=/usr/local/openssl/lib64:$LD_LIBRARY_PATH
+
+1、加载库方法
+[root@localhost engine]# openssl engine  dynamic -pre SO_PATH:/root/4119/engine/tf_engine.so -pre LOAD
+(dynamic) Dynamic engine loading support
+[Success]: SO_PATH:/root/4119/engine/tf_engine.so
+[Success]: LOAD
+Loaded: (tf_hardware_engine) tf Custom Hardware Engine
+
+如遇如下报错：
+[root@localhost openssl]# /usr/local/openssl/bin/openssl engine  dynamic -pre SO_PATH:/root/4119/engine/tf_engine.so -pre LOAD(dynamic) Dynamic engine loading support
+[Success]: SO_PATH:/root/4119/engine/tf_engine.so
+[Failure]: LOAD
+00E42EDF1B7F0000:error:13000091:engine routines:dynamic_load:version incompatibility:crypto/engine/eng_dyn.c:477:
+错误 version incompatibility（版本不兼容)
+
+

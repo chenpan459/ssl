@@ -1,0 +1,89 @@
+
+配置 Nginx 使用 OpenSSL 硬件加速引擎的详细步骤。这些步骤将帮助您利用硬件加速功能来提升 SSL/TLS 的处理性能
+1. 确认 OpenSSL 支持硬件加速
+首先，确保您的 OpenSSL 安装支持硬件加速引擎。您可以使用以下命令检查：
+openssl engine
+
+如果输出中包含支持的硬件引擎（如 aep、atalla、cswift 等），则表示您的 OpenSSL 支持硬件加速。
+2. 编译 Nginx 以支持 OpenSSL 硬件引擎
+在编译 Nginx 时，需要确保 OpenSSL 库已正确链接，并且编译选项中启用了硬件加速支持。
+下载并编译 Nginx
+
+    下载 Nginx 源码：
+    wget http://nginx.org/download/nginx-1.23.3.tar.gz
+    tar -zxvf nginx-1.23.3.tar.gz
+    cd nginx-1.23.3
+
+    配置 Nginx：
+    在配置 Nginx 时，确保指定 OpenSSL 的路径，并启用硬件加速支持：
+
+   #   ./config --prefix=/usr/local/openssl --openssldir=/usr/local/openssl shared
+   #./config --prefix=/usr/local/openssl no-shared no-threads enable-engine
+
+第一种编译方法：
+        ./configure \
+        --prefix=/usr/local/nginx \
+        --with-http_ssl_module \
+        --with-openssl=/root/4119/openssl-3.4.1 \
+        --with-openssl-opt="enable-engine"
+        
+ 第二种编译方法：        
+
+        ./configure \
+        --prefix=/usr/local/nginx \
+        --with-http_ssl_module \
+        --with-openssl=/root/4119/openssl-3.4.1 \
+        --with-openssl-opt="enable-engine enable-sm2 enable-sm3 enable-sm4 enable-ec enable-ktls no-asm"
+
+
+./config enable-sm2 enable-sm3 enable-sm4 enable-ec enable-ktls no-asm --prefix=/usr/local/openssl
+
+修改obj目录下的Makefile
+/root/4119/openssl-3.4.1/.openssl/include/openssl/ssl.h:        objs/Makefile
+        cd /root/4119/openssl-3.4.1 \
+        && if [ -f Makefile ]; then $(MAKE) clean; fi \
+        && ./config --prefix=/root/4119/openssl-3.4.1/.openssl shared no-threads \
+
+
+        ./configure \
+        --prefix=/usr/local/nginx \
+        --with-http_ssl_module \
+        --with-openssl=/root/4119/openssl-1.0.0 \
+        --with-openssl-opt="enable-engine"
+
+    编译并安装：
+    make
+    sudo make install
+
+3. 配置 Nginx 使用 OpenSSL 硬件加速
+在 Nginx 配置文件中，可以通过 ssl_engine 指令指定要使用的硬件加速引擎。
+编辑 Nginx 配置文件
+编辑 /usr/local/nginx/conf/nginx.conf 或其他相关配置文件，添加以下内容：
+server {
+    listen 443 ssl;
+    server_name your_domain_or_IP;
+
+    ssl_certificate /path/to/your/certificate.crt;
+    ssl_certificate_key /path/to/your/private.key;
+
+    # 指定使用硬件加速引擎
+    ssl_engine your_engine_name;
+
+    location / {
+        root /var/www/html;
+        index index.html;
+    }
+}
+
+将 your_engine_name 替换为实际的硬件引擎名称，例如 aep 或 cswift。
+4. 测试并启动 Nginx
+    测试配置文件：
+     /usr/local/nginx/sbin/nginx -t
+
+    启动 Nginx：
+     /usr/local/nginx/sbin/nginx
+
+5. 验证硬件加速是否生效
+可以通过以下命令检查硬件加速是否生效：
+openssl engine -t -c
+
